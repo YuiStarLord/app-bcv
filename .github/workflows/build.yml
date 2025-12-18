@@ -62,20 +62,20 @@ jobs:
         if: matrix.platform == 'windows'
         run: |
           $env:PATH = "E:\src\flutter\bin;" + $env:PATH
-          flet build windows --no-rich-output --icon icon.png --product-name "ScrapBCV"
+          flet build windows --no-rich-output --product "ScrapBCV"
           Compress-Archive -Path build/windows/runner/Release/* -DestinationPath ScrapBCV-windows.zip
 
       - name: Build APK
         if: matrix.platform == 'apk'
         run: |
-          flet build apk --no-rich-output --icon icon.png --product-name "ScrapBCV"
+          flet build apk --no-rich-output --product "ScrapBCV"
           mv build/app/outputs/flutter-apk/app-release.apk ScrapBCV-android.apk
 
       - name: Build Linux
         if: matrix.platform == 'linux'
         run: |
           export PATH="$PATH:$FLUTTER_ROOT/bin"
-          flet build linux --no-rich-output --icon icon.png --product-name "ScrapBCV"
+          flet build linux --no-rich-output --product "ScrapBCV"
           tar -czvf ScrapBCV-linux.tar.gz -C build/linux/x64/release/bundle .
 
       - name: Upload Artifacts
