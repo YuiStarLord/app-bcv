@@ -38,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flet serious-python
+          pip install flet
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
