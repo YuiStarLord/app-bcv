@@ -12,20 +12,24 @@ jobs:
     name: Build for ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - platform: windows
             os: windows-latest
-            build_cmd: flet build windows
+            build_cmd: flet build windows --no-rich-output
             artifact_path: build/windows
           - platform: apk
             os: ubuntu-latest
-            build_cmd: flet build apk
+            build_cmd: flet build apk --no-rich-output
             artifact_path: build/apk
           - platform: linux
             os: ubuntu-latest
-            build_cmd: flet build linux
+            build_cmd: flet build linux --no-rich-output
             artifact_path: build/linux
+
+    env:
+      PYTHONIOENCODING: utf-8
 
     steps:
       - uses: actions/checkout@v4
