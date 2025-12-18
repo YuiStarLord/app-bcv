@@ -17,16 +17,10 @@ jobs:
         include:
           - platform: windows
             os: windows-latest
-            build_cmd: flet build windows --no-rich-output
-            artifact_path: build/windows
           - platform: apk
             os: ubuntu-latest
-            build_cmd: flet build apk --no-rich-output
-            artifact_path: build/apk
           - platform: linux
             os: ubuntu-latest
-            build_cmd: flet build linux --no-rich-output
-            artifact_path: build/linux
 
     env:
       PYTHONIOENCODING: utf-8
@@ -64,14 +58,34 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libvlc-dev libmpv-dev
 
-      - name: Build App
-        run: ${{ matrix.build_cmd }}
+      - name: Build Windows
+        if: matrix.platform == 'windows'
+        run: |
+          $env:PATH = "E:\src\flutter\bin;" + $env:PATH
+          flet build windows --no-rich-output --icon icon.png
+          Compress-Archive -Path build/windows/runner/Release/* -DestinationPath ScrapBCV-windows.zip
+
+      - name: Build APK
+        if: matrix.platform == 'apk'
+        run: |
+          flet build apk --no-rich-output
+          mv build/app/outputs/flutter-apk/app-release.apk ScrapBCV-android.apk
+
+      - name: Build Linux
+        if: matrix.platform == 'linux'
+        run: |
+          export PATH="$PATH:$FLUTTER_ROOT/bin"
+          flet build linux --no-rich-output
+          tar -czvf ScrapBCV-linux.tar.gz -C build/linux/x64/release/bundle .
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: bcv-app-${{ matrix.platform }}
-          path: ${{ matrix.artifact_path }}
+          name: ScrapBCV-${{ matrix.platform }}
+          path: |
+            ScrapBCV-windows.zip
+            ScrapBCV-android.apk
+            ScrapBCV-linux.tar.gz
 
   release:
     name: Create Release
@@ -92,9 +106,8 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            artifacts/**/*.exe
-            artifacts/**/*.apk
-            artifacts/**/*.tar.gz
-            artifacts/**/*.zip
+            artifacts/**/ScrapBCV-windows.zip
+            artifacts/**/ScrapBCV-android.apk
+            artifacts/**/ScrapBCV-linux.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
