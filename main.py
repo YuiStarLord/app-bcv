@@ -1,3 +1,14 @@
+'''
+PROYECTO AISLADO PARA EMPRESA
+ORIGINAL BY YUISTARLOD
+MAINTAINED BY HAKKAYORO
+'''
+
+import flet as ft
+import requests
+from bs4 import BeautifulSoup
+import urllib3
+import time
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -17,9 +28,12 @@ def main(page: ft.Page):
     page.title = "Calculadora BCV"
     page.theme_mode = ft.ThemeMode.SYSTEM
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    page.scroll = ft.ScrollMode.ADAPTIVE
     page.padding = 15
-    page.window_width = 400
-    page.window_height = 700
+    
+    # Responsividad: Ajuste automático
+    page.window_min_width = 350
+    page.window_min_height = 600
 
     # Variables de estado
     datos = {"usd": 0.0, "eur": 0.0, "tasa_actual": 0.0, "modo_inverso": False}
@@ -34,7 +48,8 @@ def main(page: ft.Page):
         keyboard_type=ft.KeyboardType.NUMBER, 
         on_change=lambda e: calcular(),
         border_radius=12,
-        text_size=18
+        text_size=18,
+        expand=True
     )
     
     lbl_res = ft.Text("0,00 Bs.", size=36, weight="bold", color=ft.colors.GREEN_700, text_align="center")
@@ -105,35 +120,39 @@ def main(page: ft.Page):
 
     page.add(
         ft.SafeArea(
-            content=ft.Column([
-                ft.Row([
-                    ft.Text("Calculadora BCV", size=26, weight="bold"), 
-                    ft.IconButton(ft.icons.REFRESH, on_click=lambda _: actualizar_datos())
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                tabs,
-                ft.Container(
-                    content=ft.Column([
-                        lbl_modo,
-                        lbl_tasa,
-                        lbl_status,
-                        ft.Divider(height=30, thickness=1),
-                        txt_monto,
-                        ft.IconButton(
-                            icon=ft.icons.SWAP_VERT_CIRCLE, 
-                            icon_size=45, 
-                            on_click=invertir_sentido, 
-                            tooltip="Cambiar sentido",
-                            icon_color=ft.colors.BLUE_ACCENT
-                        ),
-                        ft.Text("Resultado:", size=16, weight="w500"),
-                        lbl_res,
-                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=25, 
-                    bgcolor=ft.colors.with_opacity(0.05, ft.colors.ON_SURFACE), 
-                    border_radius=25, 
-                    border=ft.border.all(1, ft.colors.OUTLINE_VARIANT)
-                )
-            ], spacing=20)
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Text("Calculadora BCV", size=26, weight="bold"), 
+                        ft.IconButton(ft.icons.REFRESH, on_click=lambda _: actualizar_datos())
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    tabs,
+                    ft.Container(
+                        content=ft.Column([
+                            lbl_modo,
+                            lbl_tasa,
+                            lbl_status,
+                            ft.Divider(height=30, thickness=1),
+                            ft.Row([txt_monto], alignment=ft.MainAxisAlignment.CENTER),
+                            ft.IconButton(
+                                icon=ft.icons.SWAP_VERT_CIRCLE, 
+                                icon_size=45, 
+                                on_click=invertir_sentido, 
+                                tooltip="Cambiar sentido",
+                                icon_color=ft.colors.BLUE_ACCENT
+                            ),
+                            ft.Text("Resultado:", size=16, weight="w500"),
+                            lbl_res,
+                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        padding=25, 
+                        bgcolor=ft.colors.with_opacity(0.05, ft.colors.ON_SURFACE), 
+                        border_radius=25, 
+                        border=ft.border.all(1, ft.colors.OUTLINE_VARIANT)
+                    )
+                ], spacing=20, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                max_width=500,
+                alignment=ft.alignment.top_center
+            )
         )
     )
     actualizar_datos()
