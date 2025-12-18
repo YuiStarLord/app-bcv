@@ -43,11 +43,13 @@ def obtener_datos_bcv():
 
 def main(page: ft.Page):
     logging.info("Configurando interfaz de usuario")
-    page.title = "Calculadora BCV"
+    page.title = "ScrapBCV"
     page.theme_mode = ft.ThemeMode.SYSTEM
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.scroll = ft.ScrollMode.ADAPTIVE
-    page.padding = 15
+    page.padding = 20
+    page.window_width = 400
+    page.window_height = 700
     
     # Responsividad: Ajuste automático
     page.window_min_width = 350
@@ -57,20 +59,22 @@ def main(page: ft.Page):
     datos = {"usd": 0.0, "eur": 0.0, "tasa_actual": 0.0, "modo_inverso": False}
 
     # UI Components
-    lbl_tasa = ft.Text("Cargando...", size=18, weight="bold", color=ft.Colors.BLUE)
+    lbl_tasa = ft.Text("Cargando...", size=16, weight="bold", color=ft.Colors.BLUE_GREY_400)
     lbl_status = ft.Text("", size=12, color=ft.Colors.GREY_500)
     
     txt_monto = ft.TextField(
-        label="Monto en divisa", 
+        label="Monto", 
         prefix_text="$ ", 
         keyboard_type=ft.KeyboardType.NUMBER, 
         on_change=lambda e: calcular(),
-        border_radius=12,
-        text_size=18,
-        expand=True
+        border_radius=15,
+        text_size=20,
+        expand=True,
+        border_color=ft.Colors.BLUE_GREY_200,
+        focused_border_color=ft.Colors.BLUE_600
     )
     
-    lbl_res = ft.Text("0,00 Bs.", size=36, weight="bold", color=ft.Colors.GREEN_700, text_align="center")
+    lbl_res = ft.Text("0,00 Bs.", size=40, weight="bold", color=ft.Colors.GREEN_600, text_align="center")
     lbl_modo = ft.Text("Divisa ➔ Bolívares", size=14, italic=True, color=ft.Colors.GREY_700)
 
     def calcular():
@@ -87,7 +91,7 @@ def main(page: ft.Page):
                 simbolo = "$" if tabs.selected_index == 0 else "€"
                 lbl_res.value = f"{total:,.2f} {simbolo}".replace(",", "X").replace(".", ",").replace("X", ".")
         except ValueError:
-            lbl_res.value = "Error de formato"
+            lbl_res.value = "Error"
         except Exception as e:
             logging.error(f"Error en cálculo: {str(e)}")
             lbl_res.value = "0,00"
@@ -97,17 +101,26 @@ def main(page: ft.Page):
         logging.debug("Cambiando sentido de conversión")
         datos["modo_inverso"] = not datos["modo_inverso"]
         if datos["modo_inverso"]:
-            txt_monto.label = "Monto en Bolívares"
+            txt_monto.label = "Bolívares"
             txt_monto.prefix_text = "Bs "
             lbl_modo.value = "Bolívares ➔ Divisa"
         else:
             es_dolar = tabs.selected_index == 0
-            txt_monto.label = f"Monto en {'Dólares' if es_dolar else 'Euros'}"
+            txt_monto.label = f"{'Dólares' if es_dolar else 'Euros'}"
             txt_monto.prefix_text = "$ " if es_dolar else "€ "
             lbl_modo.value = "Divisa ➔ Bolívares"
         
         calcular()
         page.update()
+
+    def paste_monto(e):
+        txt_monto.value = page.get_clipboard()
+        calcular()
+        page.update()
+
+    def copy_resultado(e):
+        page.set_clipboard(lbl_res.value)
+        page.show_snack_bar(ft.SnackBar(ft.Text("Resultado copiado!"), open=True))
 
     def actualizar_datos():
         logging.info("Actualizando datos de la interfaz")
@@ -117,7 +130,7 @@ def main(page: ft.Page):
         datos["usd"], datos["eur"] = u, e
         datos["tasa_actual"] = u if tabs.selected_index == 0 else e
         lbl_tasa.value = f"Tasa: {datos['tasa_actual']:.2f} Bs."
-        lbl_status.value = f"Última Ref: {time.strftime('%H:%M')}"
+        lbl_status.value = f"Ref: {time.strftime('%H:%M')}"
         calcular()
         page.update()
 
@@ -129,7 +142,7 @@ def main(page: ft.Page):
         on_change=lambda e: (
             logging.debug(f"Cambiando a pestaña: {e.control.selected_index}"),
             datos.update({"tasa_actual": datos["usd"] if e.control.selected_index == 0 else datos["eur"]}),
-            setattr(txt_monto, "label", f"Monto en {'Dólares' if e.control.selected_index == 0 else 'Euros'}" if not datos["modo_inverso"] else "Monto en Bolívares"),
+            setattr(txt_monto, "label", f"{'Dólares' if e.control.selected_index == 0 else 'Euros'}" if not datos["modo_inverso"] else "Bolívares"),
             setattr(txt_monto, "prefix_text", ("$ " if e.control.selected_index == 0 else "€ ") if not datos["modo_inverso"] else "Bs "),
             actualizar_datos()
         ),
@@ -137,6 +150,9 @@ def main(page: ft.Page):
             ft.Tab(text="USD", icon=ft.Icons.MONETIZATION_ON), 
             ft.Tab(text="EUR", icon=ft.Icons.EURO)
         ],
+        indicator_color=ft.Colors.BLUE_600,
+        label_color=ft.Colors.BLUE_600,
+        unselected_label_color=ft.Colors.GREY_500,
     )
 
     logging.info("Agregando componentes a la página")
@@ -144,34 +160,55 @@ def main(page: ft.Page):
         ft.SafeArea(
             content=ft.Container(
                 content=ft.Column([
-                    ft.Row([
-                        ft.Text("Calculadora BCV", size=26, weight="bold"), 
-                        ft.IconButton(ft.Icons.REFRESH, on_click=lambda _: actualizar_datos())
-                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    ft.Text("ScrapBCV", size=32, weight="bold", color=ft.Colors.BLUE_GREY_900),
+                    ft.Container(
+                        content=ft.Row([
+                            lbl_status,
+                            ft.IconButton(ft.Icons.REFRESH, on_click=lambda _: actualizar_datos(), icon_color=ft.Colors.BLUE_600)
+                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                        padding=ft.padding.only(bottom=10)
+                    ),
                     tabs,
                     ft.Container(
                         content=ft.Column([
-                            lbl_modo,
                             lbl_tasa,
-                            lbl_status,
-                            ft.Divider(height=30, thickness=1),
-                            ft.Row([txt_monto], alignment=ft.MainAxisAlignment.CENTER),
+                            ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+                            ft.Row([
+                                txt_monto,
+                                ft.IconButton(ft.Icons.CONTENT_PASTE, on_click=paste_monto, tooltip="Pegar", icon_color=ft.Colors.BLUE_GREY_400)
+                            ], alignment=ft.MainAxisAlignment.CENTER),
+                            
+                            ft.Container(height=10),
+                            
                             ft.IconButton(
                                 icon=ft.Icons.SWAP_VERT_CIRCLE, 
-                                icon_size=45, 
+                                icon_size=50, 
                                 on_click=invertir_sentido, 
-                                tooltip="Cambiar sentido",
-                                icon_color=ft.Colors.BLUE_ACCENT
+                                tooltip="Invertir",
+                                icon_color=ft.Colors.BLUE_600
                             ),
-                            ft.Text("Resultado:", size=16, weight="w500"),
-                            lbl_res,
+                            
+                            ft.Container(height=10),
+                            
+                            lbl_modo,
+                            ft.Row([
+                                lbl_res,
+                                ft.IconButton(ft.Icons.CONTENT_COPY, on_click=copy_resultado, tooltip="Copiar", icon_color=ft.Colors.GREEN_600)
+                            ], alignment=ft.MainAxisAlignment.CENTER, spacing=5),
+                            
                         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                        padding=25, 
-                        bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.ON_SURFACE), 
-                        border_radius=25, 
-                        border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT)
+                        padding=30, 
+                        bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.BLUE_GREY), 
+                        border_radius=30, 
+                        border=ft.border.all(1, ft.Colors.BLUE_GREY_100),
+                        shadow=ft.BoxShadow(
+                            spread_radius=1,
+                            blur_radius=15,
+                            color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                            offset=ft.Offset(0, 5),
+                        )
                     )
-                ], spacing=20, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                ], spacing=10, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             )
         )
     )
