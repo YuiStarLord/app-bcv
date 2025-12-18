@@ -1,14 +1,14 @@
-# Calculadora BCV 🇻🇪
+# Calculadora BCV
 
 Una aplicación sencilla y elegante construida con **Flet** para consultar las tasas oficiales del Banco Central de Venezuela (USD/EUR) y realizar conversiones rápidas. Optimizada para dispositivos móviles.
 
-## ✨ Características
+## Características
 - Consulta en tiempo real de tasas BCV (Dólar y Euro).
 - Conversión bidireccional (Divisa ➔ Bolívares y viceversa).
 - Interfaz adaptativa (Modo claro/oscuro según el sistema).
 - Diseño optimizado para teléfonos.
 
-## 🚀 Instalación
+## Instalación
 
 1. Clona este repositorio:
    ```bash
@@ -27,14 +27,14 @@ Una aplicación sencilla y elegante construida con **Flet** para consultar las t
    pip install -r requirements.txt
    ```
 
-## 🛠️ Uso
+## Uso
 
 Para ejecutar la aplicación en modo desarrollo:
 ```bash
 python main.py
 ```
 
-## 📦 Compilación
+## Compilación
 
 Para compilar la aplicación para diferentes plataformas usando Flet:
 
