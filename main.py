@@ -25,30 +25,35 @@ def obtener_datos_bcv():
 
 def main(page: ft.Page):
     page.title = "Calculadora BCV"
-    page.theme_mode = "light"
-    page.horizontal_alignment = "center"
-    page.padding = 20
+    page.theme_mode = ft.ThemeMode.SYSTEM
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    page.padding = 15
+    page.window_width = 400
+    page.window_height = 700
 
     # Variables de estado
     datos = {"usd": 0.0, "eur": 0.0, "tasa_actual": 0.0, "modo_inverso": False}
 
     # UI Components
-    lbl_tasa = ft.Text("Cargando...", size=16, weight="bold", color="blue")
-    lbl_status = ft.Text("", size=11, color="grey")
+    lbl_tasa = ft.Text("Cargando...", size=18, weight="bold", color=ft.colors.BLUE)
+    lbl_status = ft.Text("", size=12, color=ft.colors.GREY_500)
     
     txt_monto = ft.TextField(
         label="Monto en divisa", 
         prefix_text="$ ", 
-        keyboard_type="number", 
-        on_change=lambda e: calcular()
+        keyboard_type=ft.KeyboardType.NUMBER, 
+        on_change=lambda e: calcular(),
+        border_radius=12,
+        text_size=18
     )
     
-    lbl_res = ft.Text("0,00 Bs.", size=42, weight="bold", color="green700")
-    lbl_modo = ft.Text("Divisa ➔ Bolívares", size=12, italic=True)
+    lbl_res = ft.Text("0,00 Bs.", size=36, weight="bold", color=ft.colors.GREEN_700, text_align="center")
+    lbl_modo = ft.Text("Divisa ➔ Bolívares", size=14, italic=True, color=ft.colors.GREY_700)
 
     def calcular():
         try:
-            val = float(txt_monto.value.replace(",", ".")) if txt_monto.value else 0.0
+            val_str = txt_monto.value.replace(",", ".") if txt_monto.value else "0"
+            val = float(val_str)
             if not datos["modo_inverso"]:
                 # Divisa a Bs
                 total = val * datos["tasa_actual"]
@@ -58,7 +63,9 @@ def main(page: ft.Page):
                 total = val / datos["tasa_actual"] if datos["tasa_actual"] > 0 else 0
                 simbolo = "$" if tabs.selected_index == 0 else "€"
                 lbl_res.value = f"{total:,.2f} {simbolo}".replace(",", "X").replace(".", ",").replace("X", ".")
-        except:
+        except ValueError:
+            lbl_res.value = "Error de formato"
+        except Exception:
             lbl_res.value = "0,00"
         page.update()
 
@@ -94,34 +101,54 @@ def main(page: ft.Page):
     tabs = ft.Tabs(
         selected_index=0,
         on_change=lambda e: (
-            setattr(datos, "tasa_actual", datos["usd"] if e.control.selected_index == 0 else datos["eur"]),
-            # reset
+            datos.update({"tasa_actual": datos["usd"] if e.control.selected_index == 0 else datos["eur"]}),
             setattr(txt_monto, "label", f"Monto en {'Dólares' if e.control.selected_index == 0 else 'Euros'}" if not datos["modo_inverso"] else "Monto en Bolívares"),
             setattr(txt_monto, "prefix_text", ("$ " if e.control.selected_index == 0 else "€ ") if not datos["modo_inverso"] else "Bs "),
             actualizar_datos()
         ),
-        tabs=[ft.Tab(text="USD", icon="monetization_on"), ft.Tab(text="EUR", icon="euro")]
+        tabs=[
+            ft.Tab(text="USD", icon=ft.icons.MONETIZATION_ON), 
+            ft.Tab(text="EUR", icon=ft.icons.EURO)
+        ],
+        alignment=ft.MainAxisAlignment.CENTER
     )
 
     page.add(
-        ft.Row([ft.Text("Calculadora BCV", size=24, weight="bold"), ft.IconButton("refresh", on_click=lambda _: actualizar_datos())], alignment="spaceBetween"),
-        tabs,
-        ft.Container(
+        ft.SafeArea(
             content=ft.Column([
-                lbl_modo,
-                lbl_tasa,
-                lbl_status,
-                ft.Divider(),
-                txt_monto,
-                ft.IconButton(icon="swap_vert", icon_size=30, on_click=invertir_sentido, tooltip="Cambiar sentido"),
-                ft.Text("Resultado:"),
-                lbl_res,
-            ], horizontal_alignment="center"),
-            padding=20, bgcolor="#f8f9fa", border_radius=20, border=ft.border.all(1, "#dee2e6")
+                ft.Row([
+                    ft.Text("Calculadora BCV", size=26, weight="bold"), 
+                    ft.IconButton(ft.icons.REFRESH, on_click=lambda _: actualizar_datos())
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                tabs,
+                ft.Container(
+                    content=ft.Column([
+                        lbl_modo,
+                        lbl_tasa,
+                        lbl_status,
+                        ft.Divider(height=30, thickness=1),
+                        txt_monto,
+                        ft.IconButton(
+                            icon=ft.icons.SWAP_VERT_CIRCLE, 
+                            icon_size=45, 
+                            on_click=invertir_sentido, 
+                            tooltip="Cambiar sentido",
+                            icon_color=ft.colors.BLUE_ACCENT
+                        ),
+                        ft.Text("Resultado:", size=16, weight="w500"),
+                        lbl_res,
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                    padding=25, 
+                    bgcolor=ft.colors.with_opacity(0.05, ft.colors.ON_SURFACE), 
+                    border_radius=25, 
+                    border=ft.border.all(1, ft.colors.OUTLINE_VARIANT)
+                )
+            ], spacing=20)
         )
     )
     actualizar_datos()
 
-ft.app(target=main)
+if __name__ == "__main__":
+    ft.app(target=main)
 
 #/////I❤️Tefi//////
