@@ -57,8 +57,8 @@ def main(page: ft.Page):
     datos = {"usd": 0.0, "eur": 0.0, "tasa_actual": 0.0, "modo_inverso": False}
 
     # UI Components
-    lbl_tasa = ft.Text("Cargando...", size=18, weight="bold", color=ft.colors.BLUE)
-    lbl_status = ft.Text("", size=12, color=ft.colors.GREY_500)
+    lbl_tasa = ft.Text("Cargando...", size=18, weight="bold", color=ft.Colors.BLUE)
+    lbl_status = ft.Text("", size=12, color=ft.Colors.GREY_500)
     
     txt_monto = ft.TextField(
         label="Monto en divisa", 
@@ -70,8 +70,8 @@ def main(page: ft.Page):
         expand=True
     )
     
-    lbl_res = ft.Text("0,00 Bs.", size=36, weight="bold", color=ft.colors.GREEN_700, text_align="center")
-    lbl_modo = ft.Text("Divisa ➔ Bolívares", size=14, italic=True, color=ft.colors.GREY_700)
+    lbl_res = ft.Text("0,00 Bs.", size=36, weight="bold", color=ft.Colors.GREEN_700, text_align="center")
+    lbl_modo = ft.Text("Divisa ➔ Bolívares", size=14, italic=True, color=ft.Colors.GREY_700)
 
     def calcular():
         try:
@@ -134,10 +134,9 @@ def main(page: ft.Page):
             actualizar_datos()
         ),
         tabs=[
-            ft.Tab(text="USD", icon=ft.icons.MONETIZATION_ON), 
-            ft.Tab(text="EUR", icon=ft.icons.EURO)
+            ft.Tab(text="USD", icon=ft.Icons.MONETIZATION_ON), 
+            ft.Tab(text="EUR", icon=ft.Icons.EURO)
         ],
-        alignment=ft.MainAxisAlignment.CENTER
     )
 
     logging.info("Agregando componentes a la página")
@@ -147,7 +146,7 @@ def main(page: ft.Page):
                 content=ft.Column([
                     ft.Row([
                         ft.Text("Calculadora BCV", size=26, weight="bold"), 
-                        ft.IconButton(ft.icons.REFRESH, on_click=lambda _: actualizar_datos())
+                        ft.IconButton(ft.Icons.REFRESH, on_click=lambda _: actualizar_datos())
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     tabs,
                     ft.Container(
@@ -158,23 +157,21 @@ def main(page: ft.Page):
                             ft.Divider(height=30, thickness=1),
                             ft.Row([txt_monto], alignment=ft.MainAxisAlignment.CENTER),
                             ft.IconButton(
-                                icon=ft.icons.SWAP_VERT_CIRCLE, 
+                                icon=ft.Icons.SWAP_VERT_CIRCLE, 
                                 icon_size=45, 
                                 on_click=invertir_sentido, 
                                 tooltip="Cambiar sentido",
-                                icon_color=ft.colors.BLUE_ACCENT
+                                icon_color=ft.Colors.BLUE_ACCENT
                             ),
                             ft.Text("Resultado:", size=16, weight="w500"),
                             lbl_res,
                         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                         padding=25, 
-                        bgcolor=ft.colors.with_opacity(0.05, ft.colors.ON_SURFACE), 
+                        bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.ON_SURFACE), 
                         border_radius=25, 
-                        border=ft.border.all(1, ft.colors.OUTLINE_VARIANT)
+                        border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT)
                     )
                 ], spacing=20, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                max_width=500,
-                alignment=ft.alignment.top_center
             )
         )
     )
