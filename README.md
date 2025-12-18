@@ -53,5 +53,10 @@ flet build apk
 flet build web
 ```
 
+## Créditos
+
+- **YuiStarLord**: Dueño original del proyecto.
+- **HakkaYoro**: Desarrollador y colaborador.
+
 ---
-Desarrollado por **YuiStarLord**
+Desarrollado con Flet

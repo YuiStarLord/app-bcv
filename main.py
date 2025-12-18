@@ -1,13 +1,3 @@
-'''
-PROYECTO AISLADO PARA EMPRESA
-BY YUISTARLOD
-'''
-
-import flet as ft
-import requests
-from bs4 import BeautifulSoup
-import urllib3
-import time
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
