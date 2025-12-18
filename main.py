@@ -9,22 +9,40 @@ import requests
 from bs4 import BeautifulSoup
 import urllib3
 import time
+import logging
+import os
+import platform
+
+# Configuración de logs para Windows y Linux
+if platform.system() in ["Windows", "Linux"]:
+    logging.basicConfig(
+        filename="app.log",
+        filemode="w", # Sobrescribir en cada inicio
+        level=logging.DEBUG,
+        format="%(asctime)s - %(levelname)s - %(message)s"
+    )
+    logging.info(f"Iniciando aplicación en {platform.system()}")
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def obtener_datos_bcv():
+    logging.info("Iniciando obtención de datos del BCV")
     try:
         url = 'https://www.bcv.org.ve/'
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url, headers=headers, verify=False, timeout=8)
+        logging.debug(f"Respuesta del BCV: {response.status_code}")
         soup = BeautifulSoup(response.content, 'html.parser')
         usd = float(soup.find('div', id='dolar').find('strong').text.strip().replace(',', '.'))
         eur = float(soup.find('div', id='euro').find('strong').text.strip().replace(',', '.'))
+        logging.info(f"Tasas obtenidas: USD={usd}, EUR={eur}")
         return usd, eur
-    except:
+    except Exception as e:
+        logging.error(f"Error al obtener datos del BCV: {str(e)}")
         return 0.0, 0.0
 
 def main(page: ft.Page):
+    logging.info("Configurando interfaz de usuario")
     page.title = "Calculadora BCV"
     page.theme_mode = ft.ThemeMode.SYSTEM
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
@@ -70,11 +88,13 @@ def main(page: ft.Page):
                 lbl_res.value = f"{total:,.2f} {simbolo}".replace(",", "X").replace(".", ",").replace("X", ".")
         except ValueError:
             lbl_res.value = "Error de formato"
-        except Exception:
+        except Exception as e:
+            logging.error(f"Error en cálculo: {str(e)}")
             lbl_res.value = "0,00"
         page.update()
 
     def invertir_sentido(e):
+        logging.debug("Cambiando sentido de conversión")
         datos["modo_inverso"] = not datos["modo_inverso"]
         if datos["modo_inverso"]:
             txt_monto.label = "Monto en Bolívares"
@@ -90,6 +110,7 @@ def main(page: ft.Page):
         page.update()
 
     def actualizar_datos():
+        logging.info("Actualizando datos de la interfaz")
         lbl_status.value = "Sincronizando..."
         page.update()
         u, e = obtener_datos_bcv()
@@ -106,6 +127,7 @@ def main(page: ft.Page):
     tabs = ft.Tabs(
         selected_index=0,
         on_change=lambda e: (
+            logging.debug(f"Cambiando a pestaña: {e.control.selected_index}"),
             datos.update({"tasa_actual": datos["usd"] if e.control.selected_index == 0 else datos["eur"]}),
             setattr(txt_monto, "label", f"Monto en {'Dólares' if e.control.selected_index == 0 else 'Euros'}" if not datos["modo_inverso"] else "Monto en Bolívares"),
             setattr(txt_monto, "prefix_text", ("$ " if e.control.selected_index == 0 else "€ ") if not datos["modo_inverso"] else "Bs "),
@@ -118,6 +140,7 @@ def main(page: ft.Page):
         alignment=ft.MainAxisAlignment.CENTER
     )
 
+    logging.info("Agregando componentes a la página")
     page.add(
         ft.SafeArea(
             content=ft.Container(
@@ -156,8 +179,12 @@ def main(page: ft.Page):
         )
     )
     actualizar_datos()
+    logging.info("Interfaz lista")
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    try:
+        ft.app(target=main)
+    except Exception as e:
+        logging.critical(f"Error crítico al iniciar la app: {str(e)}")
 
 #/////I Love Tefi//////
