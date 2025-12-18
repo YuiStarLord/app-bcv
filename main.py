@@ -12,6 +12,7 @@ import time
 import logging
 import os
 import platform
+import re
 
 # Configuración de logs para Windows y Linux
 if platform.system() in ["Windows", "Linux"]:
@@ -113,10 +114,40 @@ def main(page: ft.Page):
         calcular()
         page.update()
 
+    def sanitize_paste(text):
+        text = text.strip()
+        # Caso 1: Formato EU (1.234,56) -> tiene puntos y termina en coma+digitos
+        if re.match(r'^[\d\.]+\,\d+$', text) and '.' in text:
+            return text.replace('.', '').replace(',', '.')
+        # Caso 2: Formato US (1,234.56) -> tiene comas y termina en punto+digitos
+        if re.match(r'^[\d,]+\.\d+$', text) and ',' in text:
+            return text.replace(',', '')
+        # Caso 3: Solo comas como decimal (1234,56)
+        if re.match(r'^\d+\,\d+$', text):
+            return text.replace(',', '.')
+        # Caso 4: Solo puntos, asumimos decimal si es simple (123.45) o miles si es complejo (1.234.567)
+        # Para simplificar y seguir la petición del usuario (123.456,70 es EU, 123,456.78 es US)
+        # Si llega 123456.78 (US plain) -> ok
+        return text
+
     def paste_monto(e):
-        txt_monto.value = page.get_clipboard()
-        calcular()
-        page.update()
+        raw_text = page.get_clipboard()
+        if raw_text:
+            sanitized = sanitize_paste(raw_text)
+            # Validar si es numérico
+            try:
+                # Intentar convertir a float para verificar validez
+                # Si sanitized tiene comas aun, fallará float() a menos que sea US plain sin comas
+                check_val = sanitized.replace(',', '') # Limpieza final para check
+                float(check_val) 
+                
+                # Si pasó, asignamos el valor sanitizado (que debería ser compatible con float o tener solo un punto)
+                txt_monto.value = sanitized
+                calcular()
+                page.update()
+                page.show_snack_bar(ft.SnackBar(ft.Text(f"Pegado: {sanitized}"), open=True))
+            except:
+                page.show_snack_bar(ft.SnackBar(ft.Text("El portapapeles no contiene un número válido"), open=True))
 
     def copy_resultado(e):
         page.set_clipboard(lbl_res.value)
