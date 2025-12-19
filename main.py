@@ -75,7 +75,7 @@ def main(page: ft.Page):
         focused_border_color=ft.Colors.BLUE_600
     )
     
-    lbl_res = ft.Text("0,00 Bs.", size=40, weight="bold", color=ft.Colors.GREEN_600, text_align="center")
+    lbl_res = ft.Text("0,00 Bs.", size=15, weight="bold", color=ft.Colors.GREEN_600, text_align="center")
     lbl_modo = ft.Text("Divisa ➔ Bolívares", size=14, italic=True, color=ft.Colors.GREY_700)
 
     def calcular():
@@ -85,7 +85,7 @@ def main(page: ft.Page):
             if not datos["modo_inverso"]:
                 # Divisa a Bs
                 total = val * datos["tasa_actual"]
-                lbl_res.value = f"{total:,.2f} Bs.".replace(",", "X").replace(".", ",").replace("X", ".")
+                lbl_res.value = f"{total:,.2f} Bs.".replace(".", "X").replace(".", ",").replace("X", ".")
             else:
                 # Bs a Divisa
                 total = val / datos["tasa_actual"] if datos["tasa_actual"] > 0 else 0
