@@ -69,7 +69,7 @@ def main(page: ft.Page):
         focused_border_color=ft.Colors.BLUE_600
     )
     
-    lbl_res = ft.Text("0,00 Bs.", size=40, weight="bold", color=ft.Colors.GREEN_600, text_align="center")
+    lbl_res = ft.Text("0,00 Bs.", size=20, weight="bold", color=ft.Colors.GREEN_600, text_align="center")
     lbl_modo = ft.Text("Divisa ➔ Bolívares", size=14, italic=True, color=ft.Colors.GREY_700)
 
     def obtener_datos_bcv():
@@ -169,7 +169,7 @@ def main(page: ft.Page):
 
     def copy_resultado(e):
         page.set_clipboard(lbl_res.value)
-        page.show_snack_bar(ft.SnackBar(ft.Text("Resultado copiado!"), open=True))
+        page.show_snack_bar(ft.SnackBar(ft.Text("¡Resultado copiado!"), open=True))
 
     def actualizar_datos():
         logging.info("Actualizando datos de la interfaz")
@@ -229,7 +229,6 @@ def main(page: ft.Page):
             if response.status_code == 200:
                 latest_data = response.json()
                 latest_version = latest_data.get("tag_name", "")
-                # Limpieza básica de v
                 v_curr = current_version.lstrip('v')
                 v_new = latest_version.lstrip('v')
                 
@@ -249,7 +248,6 @@ def main(page: ft.Page):
         except Exception as e:
             logging.error(f"Error verificando actualizaciones: {e}")
 
-    # refresh
     page.on_app_lifecycle_state_change = lambda e: actualizar_datos() if e.data == "resume" else None
 
     tabs = ft.Tabs(
@@ -309,10 +307,17 @@ def main(page: ft.Page):
                             ft.Container(height=10),
                             
                             lbl_modo,
-                            ft.Row([
+                            
+                            # MODIFICACIÓN AQUÍ: Resultado arriba y Botón abajo
+                            ft.Column([
                                 lbl_res,
-                                ft.IconButton(ft.Icons.CONTENT_COPY, on_click=copy_resultado, tooltip="Copiar", icon_color=ft.Colors.GREEN_600)
-                            ], alignment=ft.MainAxisAlignment.CENTER, spacing=5),
+                                ft.IconButton(
+                                    ft.Icons.CONTENT_COPY, 
+                                    on_click=copy_resultado, 
+                                    tooltip="Copiar", 
+                                    icon_color=ft.Colors.GREEN_600
+                                )
+                            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5),
                             
                         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                         padding=30, 
@@ -331,14 +336,11 @@ def main(page: ft.Page):
         )
     )
     
-    # Carga inicial
     actualizar_datos()
     
-    # Iniciar hilo de reintento en background
     retry_thread = threading.Thread(target=background_retry, daemon=True)
     retry_thread.start()
     
-    # Verificar actualizaciones
     check_updates()
     
     logging.info("Interfaz lista")
@@ -348,5 +350,3 @@ if __name__ == "__main__":
         ft.app(target=main)
     except Exception as e:
         logging.critical(f"Error crítico al iniciar la app: {str(e)}")
-
-#/////I Love Tefi//////
