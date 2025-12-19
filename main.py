@@ -114,12 +114,12 @@ def main(page: ft.Page):
             if not datos["modo_inverso"]:
                 # Divisa a Bs
                 total = val * datos["tasa_actual"]
-                lbl_res.value = f"{total:,.2f} Bs.".replace(",", "X").replace(".", ",").replace("X", ".")
+                lbl_res.value = f"{total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " Bs."
             else:
                 # Bs a Divisa
                 total = val / datos["tasa_actual"] if datos["tasa_actual"] > 0 else 0
                 simbolo = "$" if tabs.selected_index == 0 else "€"
-                lbl_res.value = f"{total:,.2f} {simbolo}".replace(",", "X").replace(".", ",").replace("X", ".")
+                lbl_res.value = f"{total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + f" {simbolo}"
         except ValueError:
             lbl_res.value = "Error"
         except Exception as e:
