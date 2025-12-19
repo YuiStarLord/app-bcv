@@ -75,6 +75,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -93,6 +98,9 @@ jobs:
         uses: flutter-actions/setup-flutter@v3
         with:
           channel: stable
+      - name: Accept Android Licenses
+        run: |
+          yes | flutter doctor --android-licenses
       - name: Build APK
         env:
           PYTHONIOENCODING: utf-8
