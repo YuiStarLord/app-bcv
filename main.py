@@ -27,6 +27,8 @@ if platform.system() in ["Windows", "Linux"]:
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+APP_VERSION = "v0.0.0-dev"
+
 def main(page: ft.Page):
     logging.info("Configurando interfaz de usuario")
     page.title = "ScrapBCV"
@@ -210,7 +212,7 @@ def main(page: ft.Page):
                 ft.Text("• YuiStarLord (Autor Original)"),
                 ft.Text("• HakkaYoro (Mantenedor)"),
                 ft.Divider(),
-                ft.Text("Versión: 0.0.1"),
+                ft.Text(f"Versión: {APP_VERSION}"),
                 ft.Text("Hecho con ❤️ y Flet")
             ], tight=True, spacing=10),
             actions=[
@@ -221,7 +223,7 @@ def main(page: ft.Page):
 
     def check_updates():
         try:
-            current_version = "v0.0.1"
+            current_version = APP_VERSION
             repo_url = "https://api.github.com/repos/YuiStarLord/app-bcv/releases/latest"
             response = requests.get(repo_url, timeout=3)
             if response.status_code == 200:
