@@ -1,62 +1,74 @@
-# Calculadora BCV
+# ScrapBCV
 
-Una aplicación sencilla y elegante construida con **Flet** para consultar las tasas oficiales del Banco Central de Venezuela (USD/EUR) y realizar conversiones rápidas. Optimizada para dispositivos móviles.
+Aplicación de escritorio y móvil desarrollada en **Flet** para consultar las tasas de cambio oficiales del Banco Central de Venezuela (BCV). Diseñada para ofrecer una experiencia de usuario fluida, rápida y estéticamente agradable.
 
-## Características
-- Consulta en tiempo real de tasas BCV (Dólar y Euro).
-- Conversión bidireccional (Divisa ➔ Bolívares y viceversa).
-- Interfaz adaptativa (Modo claro/oscuro según el sistema).
-- Diseño optimizado para teléfonos.
+## Características Principales
 
-## Instalación
+*   **Consulta en Tiempo Real**: Obtención automática de las tasas del Dólar y Euro desde el sitio oficial del BCV.
+*   **Conversión Inteligente**: Calculadora integrada para conversiones bidireccionales (Divisa <-> Bolívares).
+*   **Portapapeles Inteligente**: Detección automática de formatos numéricos (US/EU) al pegar montos.
+*   **Interfaz Moderna**: Diseño limpio y adaptativo que soporta modo claro y oscuro.
+*   **Multiplataforma**: Disponible para Windows, Linux y Android.
 
-1. Clona este repositorio:
-   ```bash
-   git clone https://https://github.com/YuiStarLord/app-bcv.git
-   cd app-bcv
-   ```
+## Instalación y Ejecución
 
-2. Crea un entorno virtual (recomendado):
-   ```bash
-   python -m venv venv
-   source venv/Scripts/activate  # En Windows
-   ```
+### Requisitos Previos
 
-3. Instala las dependencias:
-   ```bash
-   pip install -r requirements.txt
-   ```
+*   Python 3.11 o superior
+*   Git
 
-## Uso
+### Pasos
 
-Para ejecutar la aplicación en modo desarrollo:
-```bash
-python main.py
-```
+1.  Clonar el repositorio:
+    ```bash
+    git clone https://github.com/HakkaYoro/app-bcv.git
+    cd app-bcv
+    ```
+
+2.  Crear y activar un entorno virtual:
+    ```bash
+    python -m venv venv
+    # En Windows:
+    .\venv\Scripts\activate
+    # En Linux/Mac:
+    source venv/bin/activate
+    ```
+
+3.  Instalar dependencias:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4.  Ejecutar la aplicación:
+    ```bash
+    python main.py
+    ```
 
 ## Compilación
 
-Para compilar la aplicación para diferentes plataformas usando Flet:
+Para generar ejecutables independientes, utilice los siguientes comandos según su plataforma:
 
-### Para Windows:
+**Windows (Portable):**
 ```bash
-flet build windows
+flet build windows --product "ScrapBCV"
 ```
 
-### Para Android (requiere SDK de Android):
+**Android (APK):**
 ```bash
-flet build apk
+flet build apk --product "ScrapBCV"
 ```
 
-### Para Web:
+**Linux (AppImage/Tarball):**
 ```bash
-flet build web
+flet build linux --product "ScrapBCV"
 ```
 
-## Créditos
+## Créditos y Autoría
 
-- **YuiStarLord**: Dueño original del proyecto.
-- **HakkaYoro**: Desarrollador y colaborador.
+Este proyecto es mantenido y desarrollado por:
+
+*   **[HakkaYoro](https://github.com/HakkaYoro)** - Desarrollador Principal
+*   **[YuiStarLord](https://github.com/YuiStarLord)** - Autor Original
 
 ---
-Desarrollado con Flet
+Desarrollado con Flet y Python.
