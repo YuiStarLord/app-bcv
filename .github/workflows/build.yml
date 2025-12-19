@@ -24,6 +24,8 @@ jobs:
           VERSION="v0.0.${{ github.run_number }}"
           python -c "import pathlib; p=pathlib.Path('main.py'); p.write_text(p.read_text(encoding='utf-8').replace('v0.0.0-dev', '$VERSION'), encoding='utf-8')"
       - name: Build Windows
+        env:
+          PYTHONIOENCODING: utf-8
         run: flet build windows --product "ScrapBCV"
       - name: Package Windows
         shell: bash
@@ -91,6 +93,8 @@ jobs:
         with:
           channel: stable
       - name: Build APK
+        env:
+          PYTHONIOENCODING: utf-8
         run: flet build apk --product "ScrapBCV"
       - name: Package APK
         shell: bash
