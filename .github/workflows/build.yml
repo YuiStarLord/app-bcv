@@ -1,31 +1,15 @@
-name: Build and Release
+name: Build Flet App
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
-
-permissions:
-  contents: write
+    branches: [ "main" ]
 
 jobs:
   build:
-    name: Build for ${{ matrix.platform }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.platform }}
     strategy:
-      fail-fast: false
       matrix:
-        include:
-          - platform: windows
-            os: windows-latest
-          - platform: apk
-            os: ubuntu-latest
-          - platform: linux
-            os: ubuntu-latest
-
-    env:
-      PYTHONIOENCODING: utf-8
+        platform: [windows-latest, ubuntu-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v4
@@ -36,81 +20,82 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
+          pip install -r requirements.txt
           pip install flet
 
-      - name: Set up Java for Android
-        if: matrix.platform == 'apk'
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Install Linux dependencies
-        if: matrix.platform == 'linux'
+      - name: Inject Version
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libvlc-dev libmpv-dev
+          VERSION="v0.0.${{ github.run_number }}"
+          sed -i "s/v0.0.0-dev/$VERSION/g" main.py
+          echo "Injected version: $VERSION"
 
       - name: Build Windows
-        if: matrix.platform == 'windows'
-        run: |
-          $env:PATH = "E:\src\flutter\bin;" + $env:PATH
-          flet build windows --no-rich-output --product "ScrapBCV"
-          Compress-Archive -Path build/windows/* -DestinationPath ScrapBCV-windows.zip
-
-      - name: Build APK
-        if: matrix.platform == 'apk'
-        run: |
-          flet build apk --no-rich-output --product "ScrapBCV"
-          mv build/apk/*.apk ScrapBCV-android.apk
+        if: matrix.platform == 'windows-latest'
+        run: flet build windows --product "ScrapBCV"
 
       - name: Build Linux
-        if: matrix.platform == 'linux'
+        if: matrix.platform == 'ubuntu-latest'
+        env:
+          PYTHONIOENCODING: utf-8
         run: |
-          export PATH="$PATH:$FLUTTER_ROOT/bin"
-          flet build linux --no-rich-output --product "ScrapBCV"
-          tar -czvf ScrapBCV-linux.tar.gz -C build/linux .
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-x gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 gstreamer1.0-qt5 gstreamer1.0-pulseaudio
+          flet build linux --product "ScrapBCV"
+
+      - name: Build APK
+        if: matrix.platform == 'ubuntu-latest'
+        uses: flutter-actions/setup-flutter@v3
+        with:
+          channel: stable
+      
+      - name: Compile APK
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          flet build apk --product "ScrapBCV"
+
+      - name: Rename Artifacts
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" == "windows-latest" ]; then
+            mv build/windows "build/ScrapBCV-windows.zip"
+          elif [ "${{ matrix.platform }}" == "ubuntu-latest" ]; then
+            mv build/linux "build/ScrapBCV-linux.tar.gz"
+            mv build/apk "build/ScrapBCV-android.apk"
+          fi
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ScrapBCV-${{ matrix.platform }}
           path: |
-            ScrapBCV-windows.zip
-            ScrapBCV-android.apk
-            ScrapBCV-linux.tar.gz
+            build/ScrapBCV-windows.zip
+            build/ScrapBCV-linux.tar.gz
+            build/ScrapBCV-android.apk
 
   release:
-    name: Create Release
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Create Release
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+
+      - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v0.0.${{ github.run_number }}
-          name: Release v0.0.${{ github.run_number }}
-          draft: false
-          prerelease: false
+          name: v0.0.${{ github.run_number }}
           generate_release_notes: true
           files: |
-            artifacts/**/ScrapBCV-windows.zip
-            artifacts/**/ScrapBCV-android.apk
-            artifacts/**/ScrapBCV-linux.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            artifacts/ScrapBCV-windows-latest/ScrapBCV-windows.zip
+            artifacts/ScrapBCV-ubuntu-latest/ScrapBCV-linux.tar.gz
+            artifacts/ScrapBCV-ubuntu-latest/ScrapBCV-android.apk
