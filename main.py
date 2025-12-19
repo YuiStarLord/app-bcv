@@ -52,6 +52,22 @@ def main(page: ft.Page):
         "offline": False
     }
 
+    # --- NUEVA FUNCIÓN DE FORMATEO (MÁSCARA 0,00) ---
+    def formatear_entrada(e):
+        # Extraer solo dígitos numéricos
+        digitos = re.sub(r'\D', '', e.control.value)
+        
+        if not digitos or int(digitos) == 0:
+            e.control.value = "0,00"
+        else:
+            # Convertir a float dividiendo por 100 para los centavos
+            valor_float = int(digitos) / 100
+            # Formatear con separadores de miles (.) y decimal (,)
+            e.control.value = f"{valor_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        
+        e.control.update()
+        calcular()
+
     # UI Components
     lbl_tasa = ft.Text("Cargando...", size=16, weight="bold", color=ft.Colors.BLUE_GREY_400)
     lbl_offline = ft.Text("OFFLINE", size=12, weight="bold", color=ft.Colors.RED_600, visible=False)
@@ -59,9 +75,11 @@ def main(page: ft.Page):
     
     txt_monto = ft.TextField(
         label="Monto", 
+        value="0,00", # Inicia en 0,00
         prefix_text="$ ", 
         keyboard_type=ft.KeyboardType.NUMBER, 
-        on_change=lambda e: calcular(),
+        on_change=formatear_entrada, # Se vincula a la nueva función
+        text_align=ft.TextAlign.RIGHT, # Alineación a la derecha
         border_radius=15,
         text_size=20,
         expand=True,
@@ -109,8 +127,10 @@ def main(page: ft.Page):
 
     def calcular():
         try:
-            val_str = txt_monto.value.replace(",", ".") if txt_monto.value else "0"
-            val = float(val_str)
+            # Limpiar puntos de miles y convertir coma a punto para cálculo
+            val_clean = txt_monto.value.replace(".", "").replace(",", ".")
+            val = float(val_clean)
+            
             if not datos["modo_inverso"]:
                 # Divisa a Bs
                 total = val * datos["tasa_actual"]
@@ -120,10 +140,7 @@ def main(page: ft.Page):
                 total = val / datos["tasa_actual"] if datos["tasa_actual"] > 0 else 0
                 simbolo = "$" if tabs.selected_index == 0 else "€"
                 lbl_res.value = f"{total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + f" {simbolo}"
-        except ValueError:
-            lbl_res.value = "Error"
-        except Exception as e:
-            logging.error(f"Error en cálculo: {str(e)}")
+        except:
             lbl_res.value = "0,00"
         page.update()
 
@@ -143,29 +160,14 @@ def main(page: ft.Page):
         calcular()
         page.update()
 
-    def sanitize_paste(text):
-        text = text.strip()
-        if re.match(r'^[\d\.]+\,\d+$', text) and '.' in text:
-            return text.replace('.', '').replace(',', '.')
-        if re.match(r'^[\d,]+\.\d+$', text) and ',' in text:
-            return text.replace(',', '')
-        if re.match(r'^\d+\,\d+$', text):
-            return text.replace(',', '.')
-        return text
-
     def paste_monto(e):
         raw_text = page.get_clipboard()
         if raw_text:
-            sanitized = sanitize_paste(raw_text)
-            try:
-                check_val = sanitized.replace(',', '')
-                float(check_val) 
-                txt_monto.value = sanitized
-                calcular()
-                page.update()
-                page.show_snack_bar(ft.SnackBar(ft.Text(f"Pegado: {sanitized}"), open=True))
-            except:
-                page.show_snack_bar(ft.SnackBar(ft.Text("El portapapeles no contiene un número válido"), open=True))
+            # Al pegar, solo extraemos números y forzamos el formateo
+            digitos = re.sub(r'\D', '', raw_text)
+            if digitos:
+                txt_monto.value = digitos
+                formatear_entrada(ft.ControlEvent(target="", name="", data="", control=txt_monto, page=page))
 
     def copy_resultado(e):
         page.set_clipboard(lbl_res.value)
@@ -308,7 +310,6 @@ def main(page: ft.Page):
                             
                             lbl_modo,
                             
-                            # MODIFICACIÓN AQUÍ: Resultado arriba y Botón abajo
                             ft.Column([
                                 lbl_res,
                                 ft.IconButton(
@@ -350,3 +351,5 @@ if __name__ == "__main__":
         ft.app(target=main)
     except Exception as e:
         logging.critical(f"Error crítico al iniciar la app: {str(e)}")
+
+#I ♥ N
