@@ -4,7 +4,9 @@ on:
   push:
     branches:
       - main
-      - mejora-movil-y-docs
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -94,7 +96,7 @@ jobs:
     name: Create Release
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/mejora-movil-y-docs')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
