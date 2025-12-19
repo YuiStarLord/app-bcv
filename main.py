@@ -219,6 +219,34 @@ def main(page: ft.Page):
         )
         page.open(page.dialog)
 
+    def check_updates():
+        try:
+            current_version = "v0.0.1"
+            repo_url = "https://api.github.com/repos/YuiStarLord/app-bcv/releases/latest"
+            response = requests.get(repo_url, timeout=3)
+            if response.status_code == 200:
+                latest_data = response.json()
+                latest_version = latest_data.get("tag_name", "")
+                # Limpieza básica de v
+                v_curr = current_version.lstrip('v')
+                v_new = latest_version.lstrip('v')
+                
+                if latest_version and v_new > v_curr:
+                    def close_update_dialog(e):
+                        page.close(page.dialog)
+                    
+                    page.dialog = ft.AlertDialog(
+                        title=ft.Text("¡Actualización Disponible!"),
+                        content=ft.Text(f"Nueva versión {latest_version} disponible.\n\n{latest_data.get('body', '')}"),
+                        actions=[
+                            ft.TextButton("Descargar", on_click=lambda _: page.launch_url(latest_data.get("html_url", ""))),
+                            ft.TextButton("Cerrar", on_click=close_update_dialog)
+                        ],
+                    )
+                    page.open(page.dialog)
+        except Exception as e:
+            logging.error(f"Error verificando actualizaciones: {e}")
+
     # refresh
     page.on_app_lifecycle_state_change = lambda e: actualizar_datos() if e.data == "resume" else None
 
@@ -307,6 +335,9 @@ def main(page: ft.Page):
     # Iniciar hilo de reintento en background
     retry_thread = threading.Thread(target=background_retry, daemon=True)
     retry_thread.start()
+    
+    # Verificar actualizaciones
+    check_updates()
     
     logging.info("Interfaz lista")
 
