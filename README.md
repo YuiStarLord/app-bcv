@@ -5,10 +5,11 @@ Aplicación de escritorio y móvil desarrollada en **Flet** para consultar las t
 ## Características Principales
 
 *   **Consulta en Tiempo Real**: Obtención automática de las tasas del Dólar y Euro desde el sitio oficial del BCV.
+*   **Sistema de Caché Inteligente**: Almacena localmente las últimas tasas obtenidas para permitir consultas **Offline** cuando no hay conexión a internet.
 *   **Conversión Inteligente**: Calculadora integrada para conversiones bidireccionales (Divisa <-> Bolívares).
 *   **Portapapeles Inteligente**: Detección automática de formatos numéricos (US/EU) al pegar montos.
 *   **Interfaz Moderna**: Diseño limpio y adaptativo que soporta modo claro y oscuro.
-*   **Multiplataforma**: Disponible para Windows, Linux y Android.
+*   **Multiplataforma**: Disponible para Windows, Linux, MacOS, Android e iOS.
 
 ## Instalación y Ejecución
 
@@ -62,6 +63,17 @@ flet build apk --product "ScrapBCV"
 ```bash
 flet build linux --product "ScrapBCV"
 ```
+
+**MacOS (App/DMG):**
+```bash
+flet build macos --product "ScrapBCV"
+```
+
+**iOS (IPA):**
+```bash
+flet build ipa --product "ScrapBCV"
+```
+*Nota: Para compilar para iOS se requiere un entorno MacOS con Xcode instalado.*
 
 ## Créditos y Autoría
 
