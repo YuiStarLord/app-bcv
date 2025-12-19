@@ -202,6 +202,23 @@ def main(page: ft.Page):
                 actualizar_datos()
             time.sleep(5)
 
+    def show_credits(e):
+        page.dialog = ft.AlertDialog(
+            title=ft.Text("Créditos"),
+            content=ft.Column([
+                ft.Text("Desarrollado por:", weight="bold"),
+                ft.Text("• YuiStarLord (Autor Original)"),
+                ft.Text("• HakkaYoro (Mantenedor)"),
+                ft.Divider(),
+                ft.Text("Versión: 0.0.1"),
+                ft.Text("Hecho con ❤️ y Flet")
+            ], tight=True, spacing=10),
+            actions=[
+                ft.TextButton("Cerrar", on_click=lambda _: page.close(page.dialog))
+            ],
+        )
+        page.open(page.dialog)
+
     # refresh
     page.on_app_lifecycle_state_change = lambda e: actualizar_datos() if e.data == "resume" else None
 
@@ -228,7 +245,10 @@ def main(page: ft.Page):
         ft.SafeArea(
             content=ft.Container(
                 content=ft.Column([
-                    ft.Text("ScrapBCV", size=32, weight="bold", color=ft.Colors.BLUE_GREY_900),
+                    ft.Row([
+                        ft.Text("ScrapBCV", size=32, weight="bold", color=ft.Colors.BLUE_GREY_900),
+                        ft.IconButton(ft.Icons.INFO_OUTLINE, on_click=show_credits, icon_color=ft.Colors.BLUE_GREY_400, tooltip="Créditos")
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     ft.Container(
                         content=ft.Row([
                             ft.Row([lbl_status, lbl_offline], spacing=5),
