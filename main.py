@@ -13,6 +13,7 @@ import logging
 import os
 import platform
 import re
+import threading
 
 # Configuración de logs para Windows y Linux
 if platform.system() in ["Windows", "Linux"]:
@@ -25,22 +26,6 @@ if platform.system() in ["Windows", "Linux"]:
     logging.info(f"Iniciando aplicación en {platform.system()}")
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-def obtener_datos_bcv():
-    logging.info("Iniciando obtención de datos del BCV")
-    try:
-        url = 'https://www.bcv.org.ve/'
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(url, headers=headers, verify=False, timeout=8)
-        logging.debug(f"Respuesta del BCV: {response.status_code}")
-        soup = BeautifulSoup(response.content, 'html.parser')
-        usd = float(soup.find('div', id='dolar').find('strong').text.strip().replace(',', '.'))
-        eur = float(soup.find('div', id='euro').find('strong').text.strip().replace(',', '.'))
-        logging.info(f"Tasas obtenidas: USD={usd}, EUR={eur}")
-        return usd, eur
-    except Exception as e:
-        logging.error(f"Error al obtener datos del BCV: {str(e)}")
-        return 0.0, 0.0
 
 def main(page: ft.Page):
     logging.info("Configurando interfaz de usuario")
@@ -57,10 +42,17 @@ def main(page: ft.Page):
     page.window_min_height = 600
 
     # Variables de estado
-    datos = {"usd": 0.0, "eur": 0.0, "tasa_actual": 0.0, "modo_inverso": False}
+    datos = {
+        "usd": 0.0, 
+        "eur": 0.0, 
+        "tasa_actual": 0.0, 
+        "modo_inverso": False,
+        "offline": False
+    }
 
     # UI Components
     lbl_tasa = ft.Text("Cargando...", size=16, weight="bold", color=ft.Colors.BLUE_GREY_400)
+    lbl_offline = ft.Text("OFFLINE", size=12, weight="bold", color=ft.Colors.RED_600, visible=False)
     lbl_status = ft.Text("", size=12, color=ft.Colors.GREY_500)
     
     txt_monto = ft.TextField(
@@ -75,8 +67,43 @@ def main(page: ft.Page):
         focused_border_color=ft.Colors.BLUE_600
     )
     
-    lbl_res = ft.Text("0,00 Bs.", size=15, weight="bold", color=ft.Colors.GREEN_600, text_align="center")
+    lbl_res = ft.Text("0,00 Bs.", size=40, weight="bold", color=ft.Colors.GREEN_600, text_align="center")
     lbl_modo = ft.Text("Divisa ➔ Bolívares", size=14, italic=True, color=ft.Colors.GREY_700)
+
+    def obtener_datos_bcv():
+        logging.info("Iniciando obtención de datos del BCV")
+        try:
+            url = 'https://www.bcv.org.ve/'
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            response = requests.get(url, headers=headers, verify=False, timeout=5)
+            logging.debug(f"Respuesta del BCV: {response.status_code}")
+            
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                usd = float(soup.find('div', id='dolar').find('strong').text.strip().replace(',', '.'))
+                eur = float(soup.find('div', id='euro').find('strong').text.strip().replace(',', '.'))
+                logging.info(f"Tasas obtenidas: USD={usd}, EUR={eur}")
+                
+                # Guardar en caché
+                page.client_storage.set("cached_usd", usd)
+                page.client_storage.set("cached_eur", eur)
+                page.client_storage.set("last_update", time.strftime('%H:%M'))
+                
+                return usd, eur, False # False = No Offline
+            else:
+                raise Exception(f"Status code {response.status_code}")
+                
+        except Exception as e:
+            logging.error(f"Error al obtener datos del BCV: {str(e)}")
+            # Intentar cargar de caché
+            cached_usd = page.client_storage.get("cached_usd")
+            cached_eur = page.client_storage.get("cached_eur")
+            
+            if cached_usd and cached_eur:
+                logging.info("Usando datos en caché")
+                return cached_usd, cached_eur, True # True = Offline
+            
+            return 0.0, 0.0, True
 
     def calcular():
         try:
@@ -85,7 +112,7 @@ def main(page: ft.Page):
             if not datos["modo_inverso"]:
                 # Divisa a Bs
                 total = val * datos["tasa_actual"]
-                lbl_res.value = f"{total:,.2f} Bs.".replace(".", "X").replace(".", ",").replace("X", ".")
+                lbl_res.value = f"{total:,.2f} Bs.".replace(",", "X").replace(".", ",").replace("X", ".")
             else:
                 # Bs a Divisa
                 total = val / datos["tasa_actual"] if datos["tasa_actual"] > 0 else 0
@@ -116,32 +143,21 @@ def main(page: ft.Page):
 
     def sanitize_paste(text):
         text = text.strip()
-        # Caso 1: Formato EU (1.234,56) -> tiene puntos y termina en coma+digitos
         if re.match(r'^[\d\.]+\,\d+$', text) and '.' in text:
             return text.replace('.', '').replace(',', '.')
-        # Caso 2: Formato US (1,234.56) -> tiene comas y termina en punto+digitos
         if re.match(r'^[\d,]+\.\d+$', text) and ',' in text:
             return text.replace(',', '')
-        # Caso 3: Solo comas como decimal (1234,56)
         if re.match(r'^\d+\,\d+$', text):
             return text.replace(',', '.')
-        # Caso 4: Solo puntos, asumimos decimal si es simple (123.45) o miles si es complejo (1.234.567)
-        # Para simplificar y seguir la petición del usuario (123.456,70 es EU, 123,456.78 es US)
-        # Si llega 123456.78 (US plain) -> ok
         return text
 
     def paste_monto(e):
         raw_text = page.get_clipboard()
         if raw_text:
             sanitized = sanitize_paste(raw_text)
-            # Validar si es numérico
             try:
-                # Intentar convertir a float para verificar validez
-                # Si sanitized tiene comas aun, fallará float() a menos que sea US plain sin comas
-                check_val = sanitized.replace(',', '') # Limpieza final para check
+                check_val = sanitized.replace(',', '')
                 float(check_val) 
-                
-                # Si pasó, asignamos el valor sanitizado (que debería ser compatible con float o tener solo un punto)
                 txt_monto.value = sanitized
                 calcular()
                 page.update()
@@ -157,13 +173,34 @@ def main(page: ft.Page):
         logging.info("Actualizando datos de la interfaz")
         lbl_status.value = "Sincronizando..."
         page.update()
-        u, e = obtener_datos_bcv()
+        
+        u, e, is_offline = obtener_datos_bcv()
+        
         datos["usd"], datos["eur"] = u, e
         datos["tasa_actual"] = u if tabs.selected_index == 0 else e
+        datos["offline"] = is_offline
+        
         lbl_tasa.value = f"Tasa: {datos['tasa_actual']:.2f} Bs."
-        lbl_status.value = f"Ref: {time.strftime('%H:%M')}"
+        
+        if is_offline:
+            lbl_offline.visible = True
+            last_update = page.client_storage.get("last_update") or "?"
+            lbl_status.value = f"Última Ref: {last_update}"
+            lbl_status.color = ft.Colors.RED_400
+        else:
+            lbl_offline.visible = False
+            lbl_status.value = f"Ref: {time.strftime('%H:%M')}"
+            lbl_status.color = ft.Colors.GREY_500
+            
         calcular()
         page.update()
+
+    def background_retry():
+        while True:
+            if datos["offline"]:
+                logging.info("Modo Offline detectado, intentando reconexión...")
+                actualizar_datos()
+            time.sleep(5)
 
     # refresh
     page.on_app_lifecycle_state_change = lambda e: actualizar_datos() if e.data == "resume" else None
@@ -194,7 +231,7 @@ def main(page: ft.Page):
                     ft.Text("ScrapBCV", size=32, weight="bold", color=ft.Colors.BLUE_GREY_900),
                     ft.Container(
                         content=ft.Row([
-                            lbl_status,
+                            ft.Row([lbl_status, lbl_offline], spacing=5),
                             ft.IconButton(ft.Icons.REFRESH, on_click=lambda _: actualizar_datos(), icon_color=ft.Colors.BLUE_600)
                         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                         padding=ft.padding.only(bottom=10)
@@ -243,7 +280,14 @@ def main(page: ft.Page):
             )
         )
     )
+    
+    # Carga inicial
     actualizar_datos()
+    
+    # Iniciar hilo de reintento en background
+    retry_thread = threading.Thread(target=background_retry, daemon=True)
+    retry_thread.start()
+    
     logging.info("Interfaz lista")
 
 if __name__ == "__main__":
