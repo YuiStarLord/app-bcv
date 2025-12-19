@@ -29,8 +29,8 @@ jobs:
         shell: bash
         run: |
           VERSION="v0.0.${{ github.run_number }}"
-          sed -i "s/v0.0.0-dev/$VERSION/g" main.py
-          echo "Injected version: $VERSION"
+          echo "Injecting version: $VERSION"
+          python -c "import pathlib; p=pathlib.Path('main.py'); p.write_text(p.read_text(encoding='utf-8').replace('v0.0.0-dev', '$VERSION'), encoding='utf-8')"
 
       - name: Build Windows
         if: matrix.platform == 'windows-latest'
