@@ -182,51 +182,8 @@ jobs:
           name: ScrapBCV-macos
           path: build/ScrapBCV-macos.zip
 
-  build-ios:
-    needs: check-changes
-    if: needs.check-changes.outputs.should_run == 'true'
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-      - name: Install Dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install flet
-      - name: Inject Version
-        shell: bash
-        run: |
-          VERSION="v0.0.${{ github.run_number }}"
-          python -c "import pathlib; p=pathlib.Path('main.py'); p.write_text(p.read_text(encoding='utf-8').replace('v0.0.0-dev', '$VERSION'), encoding='utf-8')"
-      - name: Set up Flutter
-        uses: flutter-actions/setup-flutter@v3
-        with:
-          channel: stable
-      - name: Build iOS IPA
-        env:
-          PYTHONIOENCODING: utf-8
-        # Intentamos construir el IPA. Nota: Esto puede fallar si no hay certificados de firma configurados.
-        # Usamos --no-ios-signing para generar un bundle sin firmar que se pueda probar en simuladores o firmar después,
-        # aunque flet build ipa intenta hacer todo. Si falla, el usuario deberá configurar certificados.
-        # Flet no tiene flag explicito --no-ios-signing en su CLI top level, pero pasa args a flutter.
-        # Probaremos el comando estándar.
-        run: flet build ipa --product "ScrapBCV" --no-ios-signing
-      - name: Package iOS
-        run: |
-          # Flet build ipa debería dejar el archivo en build/ipa
-          mv build/ipa/*.ipa build/ScrapBCV-ios.ipa
-      - name: Upload iOS Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ScrapBCV-ios
-          path: build/ScrapBCV-ios.ipa
-
   release:
-    needs: [check-changes, build-windows, build-linux, build-android, build-macos, build-ios]
+    needs: [check-changes, build-windows, build-linux, build-android, build-macos]
     runs-on: ubuntu-latest
     if: needs.check-changes.outputs.should_run == 'true' && github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     permissions:
@@ -251,4 +208,3 @@ jobs:
             artifacts/ScrapBCV-linux.tar.gz
             artifacts/ScrapBCV-android.apk
             artifacts/ScrapBCV-macos.zip
-            artifacts/ScrapBCV-ios.ipa
