@@ -110,6 +110,8 @@ jobs:
     needs: check-changes
     if: needs.check-changes.outputs.should_run == 'true'
     runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Java
@@ -142,12 +144,12 @@ jobs:
           yes | flutter doctor --android-licenses
       
       - name: Decode Keystore
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > upload-keystore.jks
 
       - name: Build APK (Signed)
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
         env:
           PYTHONIOENCODING: utf-8
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -161,7 +163,7 @@ jobs:
             --android-signing-key-password "$ANDROID_KEY_PASSWORD"
 
       - name: Build APK (Unsigned)
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
+        if: env.ANDROID_KEYSTORE_BASE64 == ''
         env:
           PYTHONIOENCODING: utf-8
         run: flet build apk --product "ScrapBCV"
