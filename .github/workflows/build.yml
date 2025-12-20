@@ -50,7 +50,9 @@ jobs:
       - name: Inject Version
         shell: bash
         run: |
-          VERSION="v0.0.${{ github.run_number }}"
+          # Offset de 15 para reiniciar el contador en v0.1.1 (Run #16 - 15 = 1)
+          BUILD_NUM=$((${{ github.run_number }} - 15))
+          VERSION="v0.1.$BUILD_NUM"
           python -c "import pathlib; p=pathlib.Path('main.py'); p.write_text(p.read_text(encoding='utf-8').replace('v0.0.0-dev', '$VERSION'), encoding='utf-8')"
       - name: Build Windows
         env:
@@ -84,7 +86,9 @@ jobs:
       - name: Inject Version
         shell: bash
         run: |
-          VERSION="v0.0.${{ github.run_number }}"
+          # Offset de 15 para reiniciar el contador en v0.1.1 (Run #16 - 15 = 1)
+          BUILD_NUM=$((${{ github.run_number }} - 15))
+          VERSION="v0.1.$BUILD_NUM"
           python -c "import pathlib; p=pathlib.Path('main.py'); p.write_text(p.read_text(encoding='utf-8').replace('v0.0.0-dev', '$VERSION'), encoding='utf-8')"
       - name: Build Linux
         env:
@@ -125,7 +129,9 @@ jobs:
       - name: Inject Version
         shell: bash
         run: |
-          VERSION="v0.0.${{ github.run_number }}"
+          # Offset de 15 para reiniciar el contador en v0.1.1 (Run #16 - 15 = 1)
+          BUILD_NUM=$((${{ github.run_number }} - 15))
+          VERSION="v0.1.$BUILD_NUM"
           python -c "import pathlib; p=pathlib.Path('main.py'); p.write_text(p.read_text(encoding='utf-8').replace('v0.0.0-dev', '$VERSION'), encoding='utf-8')"
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v3
@@ -134,10 +140,32 @@ jobs:
       - name: Accept Android Licenses
         run: |
           yes | flutter doctor --android-licenses
-      - name: Build APK
+      
+      - name: Decode Keystore
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > upload-keystore.jks
+
+      - name: Build APK (Signed)
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          PYTHONIOENCODING: utf-8
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          flet build apk --product "ScrapBCV" \
+            --android-signing-key-store upload-keystore.jks \
+            --android-signing-key-store-password "$ANDROID_KEYSTORE_PASSWORD" \
+            --android-signing-key-alias "$ANDROID_KEY_ALIAS" \
+            --android-signing-key-password "$ANDROID_KEY_PASSWORD"
+
+      - name: Build APK (Unsigned)
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
         env:
           PYTHONIOENCODING: utf-8
         run: flet build apk --product "ScrapBCV"
+
       - name: Package APK
         run: |
           mv build/apk/*.apk build/ScrapBCV-android.apk
@@ -165,7 +193,9 @@ jobs:
       - name: Inject Version
         shell: bash
         run: |
-          VERSION="v0.0.${{ github.run_number }}"
+          # Offset de 15 para reiniciar el contador en v0.1.1 (Run #16 - 15 = 1)
+          BUILD_NUM=$((${{ github.run_number }} - 15))
+          VERSION="v0.1.$BUILD_NUM"
           python -c "import pathlib; p=pathlib.Path('main.py'); p.write_text(p.read_text(encoding='utf-8').replace('v0.0.0-dev', '$VERSION'), encoding='utf-8')"
       - name: Build MacOS
         env:
@@ -197,11 +227,18 @@ jobs:
       - name: Display structure
         run: ls -R artifacts
 
+      - name: Calculate Version
+        id: version
+        shell: bash
+        run: |
+          BUILD_NUM=$((${{ github.run_number }} - 15))
+          echo "version=v0.1.$BUILD_NUM" >> $GITHUB_OUTPUT
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.0.${{ github.run_number }}
-          name: v0.0.${{ github.run_number }}
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
           generate_release_notes: true
           files: |
             artifacts/ScrapBCV-windows.zip
