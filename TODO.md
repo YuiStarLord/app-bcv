@@ -1,7 +1,7 @@
 # To-Do List - ScrapBCV
 
-- [ ] Firma digital de la APK
-- [ ] Mostrar diferencia del precio del dolar respecto a la tasa del día anterior
+- [x] Firma digital de la APK
+- [x] Mostrar diferencia del precio del dolar respecto a la tasa del día anterior
 - [ ] Publicarlo en Play Store ?)
 - [ ] Tasa Binance (USDT)
 - [ ] Historial / Gráfica (investigar, pero se puede implementar con Linechart o Barchart, nativo de flet)
