@@ -29,6 +29,65 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 APP_VERSION = "v0.0.0-dev"
 
+def obtener_datos_bcv(page=None):
+    logging.info("Iniciando obtención de datos del BCV")
+    try:
+        url = 'https://www.bcv.org.ve/'
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers, verify=False, timeout=5)
+        logging.debug(f"Respuesta del BCV: {response.status_code}")
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            usd = float(soup.find('div', id='dolar').find('strong').text.strip().replace(',', '.'))
+            eur = float(soup.find('div', id='euro').find('strong').text.strip().replace(',', '.'))
+            logging.info(f"Tasas obtenidas: USD={usd}, EUR={eur}")
+            
+            # Valores por defecto para historial
+            prev_usd = usd
+            prev_eur = eur
+            
+            # Lógica de historial (Cache) si hay página
+            if page:
+                cached_usd = page.client_storage.get("cached_usd") or usd
+                cached_eur = page.client_storage.get("cached_eur") or eur
+                
+                prev_usd = page.client_storage.get("prev_usd") or cached_usd
+                prev_eur = page.client_storage.get("prev_eur") or cached_eur
+
+                # Si la tasa cambió, actualizamos el historial
+                if usd != cached_usd:
+                    prev_usd = cached_usd # La actual pasa a ser la anterior
+                    page.client_storage.set("prev_usd", prev_usd)
+                    page.client_storage.set("cached_usd", usd) # Guardamos la nueva
+                
+                if eur != cached_eur:
+                    prev_eur = cached_eur
+                    page.client_storage.set("prev_eur", prev_eur)
+                    page.client_storage.set("cached_eur", eur)
+
+                page.client_storage.set("last_update", time.strftime('%H:%M'))
+            
+            return usd, eur, prev_usd, prev_eur, False # False = No Offline
+        else:
+            raise Exception(f"Status code {response.status_code}")
+            
+    except Exception as e:
+        logging.error(f"Error al obtener datos del BCV: {str(e)}")
+        
+        if page:
+            # Intentar cargar de caché
+            cached_usd = page.client_storage.get("cached_usd")
+            cached_eur = page.client_storage.get("cached_eur")
+            prev_usd = page.client_storage.get("prev_usd") or cached_usd
+            prev_eur = page.client_storage.get("prev_eur") or cached_eur
+            
+            if cached_usd and cached_eur:
+                logging.info("Usando datos en caché")
+                return cached_usd, cached_eur, prev_usd, prev_eur, True # True = Offline
+        
+        return 0.0, 0.0, 0.0, 0.0, True
+
 def main(page: ft.Page):
     logging.info("Configurando interfaz de usuario")
     page.title = "ScrapBCV"
@@ -47,7 +106,10 @@ def main(page: ft.Page):
     datos = {
         "usd": 0.0, 
         "eur": 0.0, 
+        "prev_usd": 0.0, # Tasa anterior del Dólar
+        "prev_eur": 0.0, # Tasa anterior del Euro
         "tasa_actual": 0.0, 
+        "tasa_anterior": 0.0, # Tasa anterior seleccionada
         "modo_inverso": False,
         "offline": False
     }
@@ -70,6 +132,7 @@ def main(page: ft.Page):
 
     # UI Components
     lbl_tasa = ft.Text("Cargando...", size=16, weight="bold", color=ft.Colors.BLUE_GREY_400)
+    lbl_diff = ft.Text("", size=12, weight="bold", visible=False) # Indicador de diferencia (Sube/Baja)
     lbl_offline = ft.Text("OFFLINE", size=12, weight="bold", color=ft.Colors.RED_600, visible=False)
     lbl_status = ft.Text("", size=12, color=ft.Colors.GREY_500)
     
@@ -89,41 +152,6 @@ def main(page: ft.Page):
     
     lbl_res = ft.Text("0,00 Bs.", size=20, weight="bold", color=ft.Colors.GREEN_600, text_align="center")
     lbl_modo = ft.Text("Divisa ➔ Bolívares", size=14, italic=True, color=ft.Colors.GREY_700)
-
-    def obtener_datos_bcv():
-        logging.info("Iniciando obtención de datos del BCV")
-        try:
-            url = 'https://www.bcv.org.ve/'
-            headers = {'User-Agent': 'Mozilla/5.0'}
-            response = requests.get(url, headers=headers, verify=False, timeout=5)
-            logging.debug(f"Respuesta del BCV: {response.status_code}")
-            
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.content, 'html.parser')
-                usd = float(soup.find('div', id='dolar').find('strong').text.strip().replace(',', '.'))
-                eur = float(soup.find('div', id='euro').find('strong').text.strip().replace(',', '.'))
-                logging.info(f"Tasas obtenidas: USD={usd}, EUR={eur}")
-                
-                # Guardar en caché
-                page.client_storage.set("cached_usd", usd)
-                page.client_storage.set("cached_eur", eur)
-                page.client_storage.set("last_update", time.strftime('%H:%M'))
-                
-                return usd, eur, False # False = No Offline
-            else:
-                raise Exception(f"Status code {response.status_code}")
-                
-        except Exception as e:
-            logging.error(f"Error al obtener datos del BCV: {str(e)}")
-            # Intentar cargar de caché
-            cached_usd = page.client_storage.get("cached_usd")
-            cached_eur = page.client_storage.get("cached_eur")
-            
-            if cached_usd and cached_eur:
-                logging.info("Usando datos en caché")
-                return cached_usd, cached_eur, True # True = Offline
-            
-            return 0.0, 0.0, True
 
     def calcular():
         try:
@@ -178,13 +206,36 @@ def main(page: ft.Page):
         lbl_status.value = "Sincronizando..."
         page.update()
         
-        u, e, is_offline = obtener_datos_bcv()
+        # Pasamos 'page' para que use el almacenamiento local
+        u, e, pu, pe, is_offline = obtener_datos_bcv(page)
         
         datos["usd"], datos["eur"] = u, e
-        datos["tasa_actual"] = u if tabs.selected_index == 0 else e
+        datos["prev_usd"], datos["prev_eur"] = pu, pe
+        
+        # Seleccionar tasa actual y anterior según la pestaña activa
+        if tabs.selected_index == 0:
+            datos["tasa_actual"] = u
+            datos["tasa_anterior"] = pu
+        else:
+            datos["tasa_actual"] = e
+            datos["tasa_anterior"] = pe
+
         datos["offline"] = is_offline
         
         lbl_tasa.value = f"Tasa: {datos['tasa_actual']:.2f} Bs."
+        
+        # Calcular diferencia y mostrar colores
+        diff = datos["tasa_actual"] - datos["tasa_anterior"]
+        # Usamos un umbral pequeño para evitar errores de punto flotante
+        if abs(diff) > 0.001:
+            lbl_diff.visible = True
+            signo = "+" if diff > 0 else "-"
+            # Rojo si sube (más caro), Verde si baja (más barato)
+            color_diff = ft.Colors.RED_600 if diff > 0 else ft.Colors.GREEN_600
+            lbl_diff.value = f"{signo}{abs(diff):.2f} Bs."
+            lbl_diff.color = color_diff
+        else:
+            lbl_diff.visible = False # Si no hay cambio, ocultamos
         
         if is_offline:
             lbl_offline.visible = True
@@ -256,7 +307,10 @@ def main(page: ft.Page):
         selected_index=0,
         on_change=lambda e: (
             logging.debug(f"Cambiando a pestaña: {e.control.selected_index}"),
-            datos.update({"tasa_actual": datos["usd"] if e.control.selected_index == 0 else datos["eur"]}),
+            datos.update({
+                "tasa_actual": datos["usd"] if e.control.selected_index == 0 else datos["eur"],
+                "tasa_anterior": datos["prev_usd"] if e.control.selected_index == 0 else datos["prev_eur"]
+            }),
             setattr(txt_monto, "label", f"{'Dólares' if e.control.selected_index == 0 else 'Euros'}" if not datos["modo_inverso"] else "Bolívares"),
             setattr(txt_monto, "prefix_text", ("$ " if e.control.selected_index == 0 else "€ ") if not datos["modo_inverso"] else "Bs "),
             actualizar_datos()
@@ -290,6 +344,7 @@ def main(page: ft.Page):
                     ft.Container(
                         content=ft.Column([
                             lbl_tasa,
+                            lbl_diff, # Aquí mostramos la diferencia
                             ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
                             ft.Row([
                                 txt_monto,
@@ -351,5 +406,3 @@ if __name__ == "__main__":
         ft.app(target=main)
     except Exception as e:
         logging.critical(f"Error crítico al iniciar la app: {str(e)}")
-
-#I ♥ N
