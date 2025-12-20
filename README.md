@@ -9,7 +9,7 @@ Aplicación de escritorio y móvil desarrollada en **Flet** para consultar las t
 *   **Conversión Inteligente**: Calculadora integrada para conversiones bidireccionales (Divisa <-> Bolívares).
 *   **Portapapeles Inteligente**: Detección automática de formatos numéricos (US/EU) al pegar montos.
 *   **Interfaz Moderna**: Diseño limpio y adaptativo que soporta modo claro y oscuro.
-*   **Multiplataforma**: Disponible para Windows, Linux, MacOS, Android e iOS.
+*   **Multiplataforma**: Disponible para Windows, Linux, MacOS y Android.
 
 ## Instalación y Ejecución
 
@@ -68,12 +68,6 @@ flet build linux --product "ScrapBCV"
 ```bash
 flet build macos --product "ScrapBCV"
 ```
-
-**iOS (IPA):**
-```bash
-flet build ipa --product "ScrapBCV"
-```
-*Nota: Para compilar para iOS se requiere un entorno MacOS con Xcode instalado.*
 
 ## Créditos y Autoría
 
