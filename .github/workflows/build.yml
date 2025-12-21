@@ -173,7 +173,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           flet build apk --product "ScrapBCV" \
-            --build-name "$APP_BUILD_NAME" \
+            --build-version "$APP_BUILD_NAME" \
             --build-number "$APP_BUILD_NUMBER" \
             --android-signing-key-store "$(pwd)/upload-keystore.jks" \
             --android-signing-key-store-password "$ANDROID_KEYSTORE_PASSWORD" \
