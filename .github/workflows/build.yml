@@ -134,6 +134,11 @@ jobs:
           # Offset de 15 para reiniciar el contador en v0.1.1 (Run #16 - 15 = 1)
           BUILD_NUM=$((${{ github.run_number }} - 15))
           VERSION="v0.1.$BUILD_NUM"
+          
+          # Exportar variables para el paso de compilación
+          echo "APP_BUILD_NUMBER=$BUILD_NUM" >> $GITHUB_ENV
+          echo "APP_BUILD_NAME=0.1.$BUILD_NUM" >> $GITHUB_ENV
+          
           python -c "import pathlib; p=pathlib.Path('main.py'); p.write_text(p.read_text(encoding='utf-8').replace('v0.0.0-dev', '$VERSION'), encoding='utf-8')"
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v3
@@ -168,6 +173,8 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           flet build apk --product "ScrapBCV" \
+            --build-name "$APP_BUILD_NAME" \
+            --build-number "$APP_BUILD_NUMBER" \
             --android-signing-key-store "$(pwd)/upload-keystore.jks" \
             --android-signing-key-store-password "$ANDROID_KEYSTORE_PASSWORD" \
             --android-signing-key-alias "$ANDROID_KEY_ALIAS" \
