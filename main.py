@@ -24,9 +24,10 @@ from flet import (
     Share,
     ShareFile,
     SharedPreferences,
-    Screenshot,
     UrlLauncher,
 )
+
+import generador_imagen
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -117,14 +118,18 @@ async def obtener_datos_bcv(prefs: SharedPreferences | None = None):
             cached_eur = await prefs.get("cached_eur")
             prev_usd = await prefs.get("prev_usd") or cached_usd or usd
             prev_eur = await prefs.get("prev_eur") or cached_eur or eur
-            if cached_usd is not None and usd != float(cached_usd):
-                await prefs.set("prev_usd", str(cached_usd))
+            # La caché se escribe SIEMPRE (también en la primera ejecución);
+            # la anterior solo se actualiza cuando la tasa cambió.
+            if cached_usd is None or usd != float(cached_usd):
+                if cached_usd is not None:
+                    await prefs.set("prev_usd", str(cached_usd))
+                    prev_usd = cached_usd
                 await prefs.set("cached_usd", str(usd))
-                prev_usd = cached_usd
-            if cached_eur is not None and eur != float(cached_eur):
-                await prefs.set("prev_eur", str(cached_eur))
+            if cached_eur is None or eur != float(cached_eur):
+                if cached_eur is not None:
+                    await prefs.set("prev_eur", str(cached_eur))
+                    prev_eur = cached_eur
                 await prefs.set("cached_eur", str(eur))
-                prev_eur = cached_eur
             await prefs.set("last_update", time.strftime("%H:%M"))
         return usd, eur, float(prev_usd), float(prev_eur), False
     except Exception as exc:
@@ -174,11 +179,28 @@ async def main(page: ft.Page):
             return f"{formatear_es_ve(total)} {simbolo}"
         return f"{formatear_es_ve(val * estado['tasa_actual'])} Bs."
 
-    def tasa_grande() -> ft.Text:
-        return ft.Text(
-            f"{formatear_es_ve(estado['tasa_actual'])} Bs.",
-            size=40, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE,
-        )
+    async def animar_tasa(hasta: float):
+        """Odómetro: cuenta desde la tasa mostrada hasta la nueva (ease-out)."""
+        desde = estado.get("tasa_mostrada") or 0.0
+        if abs(hasta - desde) < 0.005:
+            estado["tasa_mostrada"] = hasta
+            lbl_tasa.value = f"{formatear_es_ve(hasta)} Bs."
+            lbl_tasa.update()
+            return
+        estado["animacion_id"] = estado.get("animacion_id", 0) + 1
+        mi_turno = estado["animacion_id"]
+        pasos = 26
+        for i in range(1, pasos + 1):
+            if estado["animacion_id"] != mi_turno:
+                return  # una animación más nueva la relevó
+            t = i / pasos
+            suave = 1 - (1 - t) ** 3
+            lbl_tasa.value = f"{formatear_es_ve(desde + (hasta - desde) * suave)} Bs."
+            lbl_tasa.update()
+            await asyncio.sleep(0.02)
+        estado["tasa_mostrada"] = hasta
+        lbl_tasa.value = f"{formatear_es_ve(hasta)} Bs."
+        lbl_tasa.update()
 
     def resultado_texto() -> ft.Text:
         return ft.Text(
@@ -274,47 +296,16 @@ async def main(page: ft.Page):
             f"📅 {fecha_hoy_es_ve()} — vía ScrapBCV"
         )
 
-    def _tarjeta_para_compartir() -> ft.Container:
-        moneda = "USD" if estado["tab"] == 0 else "EUR"
-        blanco70 = ft.Colors.with_opacity(0.7, ft.Colors.WHITE)
-        return ft.Container(
-            width=420, padding=28, border_radius=28,
-            gradient=ft.LinearGradient(
-                begin=ft.Alignment.TOP_LEFT, end=ft.Alignment.BOTTOM_RIGHT,
-                colors=["#3949AB", "#7E57C2"],
-            ),
-            content=ft.Column(
-                [
-                    ft.Text("ScrapBCV", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-                    ft.Text(f"Tasa oficial del BCV · {moneda}", size=14, color=blanco70),
-                    ft.Container(height=8),
-                    ft.Text(
-                        f"{formatear_es_ve(estado['tasa_actual'])} Bs.",
-                        size=44, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE,
-                    ),
-                    ft.Text(f"Actualizado {estado['ultima_ref']}", size=13, color=blanco70),
-                    ft.Container(height=8),
-                    ft.Text(fecha_hoy_es_ve(), size=13, color=blanco70),
-                    ft.Text(
-                        "Fuente: Banco Central de Venezuela",
-                        size=11, color=ft.Colors.with_opacity(0.55, ft.Colors.WHITE),
-                    ),
-                ],
-                spacing=6, horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-        )
-
     async def compartir_tasa_imagen(_):
-        shot = Screenshot(content=_tarjeta_para_compartir())
         try:
-            log.info("Compartir tasa: construyendo tarjeta…")
-            page.overlay.append(shot)
-            page.update()
-            await asyncio.sleep(0.2)
-            png = await shot.capture(pixel_ratio=3.0)  # double estricto en el canal
-            log.info("Compartir tasa: PNG capturado (%d bytes)", len(png))
-            page.overlay.remove(shot)
-            page.update()
+            log.info("Compartir tasa: generando imagen en segundo plano…")
+            png = await asyncio.to_thread(
+                generador_imagen.generar_imagen_tasa,
+                estado["usd"], estado["eur"],
+                estado["prev_usd"], estado["prev_eur"],
+                estado["ultima_ref"],
+            )
+            log.info("Compartir tasa: imagen lista (%d bytes)", len(png))
             base = os.environ.get("FLET_APP_STORAGE_CACHE") or tempfile.gettempdir()
             ruta = os.path.join(base, f"tasa_bcv_{time.strftime('%Y%m%d')}.png")
             with open(ruta, "wb") as f:
@@ -328,9 +319,6 @@ async def main(page: ft.Page):
 
         except Exception as exc:
             log.error("No se pudo compartir la imagen: %s", exc)
-            if shot in page.overlay:
-                page.overlay.remove(shot)
-                page.update()
             try:
                 await clipboard.set(_texto_tasa())
                 _avisar("No se pudo abrir el diálogo de compartir; se copió al portapapeles")
@@ -361,7 +349,7 @@ async def main(page: ft.Page):
         indice = estado["tab"]
         estado["tasa_actual"] = estado["usd"] if indice == 0 else estado["eur"]
         estado["tasa_anterior"] = estado["prev_usd"] if indice == 0 else estado["prev_eur"]
-        switcher_tasa.content = tasa_grande()
+        page.run_task(animar_tasa, estado["tasa_actual"])
 
         diff = estado["tasa_actual"] - estado["tasa_anterior"]
         if abs(diff) > 0.001:
@@ -461,10 +449,7 @@ async def main(page: ft.Page):
     )
     txt_estado = ft.Text("Conectando…", size=13, color=ft.Colors.GREY_600)
 
-    switcher_tasa = ft.AnimatedSwitcher(
-        content=tasa_grande(), duration=350, transition=ft.AnimatedSwitcherTransition.FADE,
-        switch_in_curve=ft.AnimationCurve.EASE_OUT, switch_out_curve=ft.AnimationCurve.EASE_OUT,
-    )
+    lbl_tasa = ft.Text("0,00 Bs.", size=40, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
 
     chip_variacion = ft.Chip(
         label=ft.Text("", size=13, weight=ft.FontWeight.BOLD),
@@ -533,7 +518,7 @@ async def main(page: ft.Page):
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 ),
                 selector_moneda,
-                switcher_tasa,
+                lbl_tasa,
                 chip_variacion,
                 ft.Row(
                     [
