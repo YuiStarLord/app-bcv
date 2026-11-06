@@ -59,9 +59,9 @@ jobs:
       - name: Inject Version
         shell: bash
         run: |
-          # Offset de 15 para reiniciar el contador en v0.1.1 (Run #16 - 15 = 1)
-          BUILD_NUM=$((${{ github.run_number }} - 15))
-          VERSION="v0.1.$BUILD_NUM"
+          # Versión por fecha (monótona); el versionCode de Android usa el run number.
+          BUILD_NUM=${{ github.run_number }}
+          VERSION="v0.1.$(date +%Y%m%d)"
           python -c "import pathlib; p=pathlib.Path('main.py'); p.write_text(p.read_text(encoding='utf-8').replace('v0.0.0-dev', '$VERSION'), encoding='utf-8')"
       - name: Build Windows
         env:
@@ -101,9 +101,9 @@ jobs:
       - name: Inject Version
         shell: bash
         run: |
-          # Offset de 15 para reiniciar el contador en v0.1.1 (Run #16 - 15 = 1)
-          BUILD_NUM=$((${{ github.run_number }} - 15))
-          VERSION="v0.1.$BUILD_NUM"
+          # Versión por fecha (monótona); el versionCode de Android usa el run number.
+          BUILD_NUM=${{ github.run_number }}
+          VERSION="v0.1.$(date +%Y%m%d)"
           python -c "import pathlib; p=pathlib.Path('main.py'); p.write_text(p.read_text(encoding='utf-8').replace('v0.0.0-dev', '$VERSION'), encoding='utf-8')"
       - name: Build Linux
         env:
@@ -152,9 +152,9 @@ jobs:
       - name: Inject Version
         shell: bash
         run: |
-          # Offset de 15 para reiniciar el contador en v0.1.1 (Run #16 - 15 = 1)
-          BUILD_NUM=$((${{ github.run_number }} - 15))
-          VERSION="v0.1.$BUILD_NUM"
+          # Versión por fecha (monótona); el versionCode de Android usa el run number.
+          BUILD_NUM=${{ github.run_number }}
+          VERSION="v0.1.$(date +%Y%m%d)"
 
           # Exportar variables para el paso de compilación
           echo "APP_BUILD_NUMBER=$BUILD_NUM" >> $GITHUB_ENV
@@ -241,9 +241,9 @@ jobs:
       - name: Inject Version
         shell: bash
         run: |
-          # Offset de 15 para reiniciar el contador en v0.1.1 (Run #16 - 15 = 1)
-          BUILD_NUM=$((${{ github.run_number }} - 15))
-          VERSION="v0.1.$BUILD_NUM"
+          # Versión por fecha (monótona); el versionCode de Android usa el run number.
+          BUILD_NUM=${{ github.run_number }}
+          VERSION="v0.1.$(date +%Y%m%d)"
           python -c "import pathlib; p=pathlib.Path('main.py'); p.write_text(p.read_text(encoding='utf-8').replace('v0.0.0-dev', '$VERSION'), encoding='utf-8')"
       - name: Build MacOS
         env:
@@ -263,7 +263,7 @@ jobs:
   release:
     needs: [check-changes, build-windows, build-linux, build-android, build-macos]
     runs-on: ubuntu-latest
-    if: needs.check-changes.outputs.should_run == 'true' && github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: needs.check-changes.outputs.should_run == 'true'
     permissions:
       contents: write
     steps:
@@ -279,8 +279,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          BUILD_NUM=$((${{ github.run_number }} - 15))
-          echo "version=v0.1.$BUILD_NUM" >> $GITHUB_OUTPUT
+          echo "version=v0.1.$(date +%Y%m%d)" >> $GITHUB_OUTPUT
 
       - name: Release
         uses: softprops/action-gh-release@v2
