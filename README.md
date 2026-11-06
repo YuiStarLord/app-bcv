@@ -1,14 +1,15 @@
 # ScrapBCV
 
-Aplicación de escritorio y móvil desarrollada en **Flet** para consultar las tasas de cambio oficiales del Banco Central de Venezuela (BCV). Diseñada para ofrecer una experiencia de usuario fluida, rápida y estéticamente agradable.
+Aplicación de escritorio y móvil desarrollada en **Flet 1.x (Python)** para consultar las tasas de cambio oficiales del Banco Central de Venezuela (BCV). Diseñada para ofrecer una experiencia de usuario fluida, rápida y estéticamente agradable.
 
 ## Características Principales
 
-*   **Consulta en Tiempo Real**: Obtención automática de las tasas del Dólar y Euro desde el sitio oficial del BCV.
-*   **Sistema de Caché Inteligente**: Almacena localmente las últimas tasas obtenidas para permitir consultas **Offline** cuando no hay conexión a internet.
-*   **Conversión Inteligente**: Calculadora integrada para conversiones bidireccionales (Divisa <-> Bolívares).
-*   **Portapapeles Inteligente**: Detección automática de formatos numéricos (US/EU) al pegar montos.
-*   **Interfaz Moderna**: Diseño limpio y adaptativo que soporta modo claro y oscuro.
+*   **Consulta en Tiempo Real**: Obtención automática de las tasas del Dólar y Euro desde el sitio oficial del BCV (parser tolerante a montos de cuatro cifras y separadores es-VE).
+*   **Sistema de Caché Inteligente**: Almacena localmente las últimas tasas obtenidas (SharedPreferences) para permitir consultas **Offline** cuando no hay conexión, con reintentos automáticos.
+*   **Conversión Inteligente**: Calculadora integrada para conversiones bidireccionales (Divisa <-> Bolívares) con máscara de entrada en formato es-VE (`1.234,56`) y cursor siempre al final.
+*   **Compartir Tasa (Imagen)**: Genera una tarjeta con la tasa del día (renderizada con el control `Screenshot` de Flet) y la comparte como imagen PNG por cualquier app (WhatsApp, Telegram, etc.) mediante el servicio `Share`.
+*   **Compartir Cálculo**: Comparte el resultado de la conversión como texto formateado (monto, tasa y fecha).
+*   **Interfaz Moderna**: Material 3 con modo claro/oscuro automático, tarjeta de gradiente, selector de moneda con píldora deslizante animada y transiciones animadas en tasas y resultados.
 *   **Multiplataforma**: Disponible para Windows, Linux, MacOS y Android.
 
 ## Instalación y Ejecución
@@ -22,7 +23,7 @@ Aplicación de escritorio y móvil desarrollada en **Flet** para consultar las t
 
 1.  Clonar el repositorio:
     ```bash
-    git clone https://github.com/HakkaYoro/app-bcv.git
+    git clone https://github.com/YuiStarLord/app-bcv.git
     cd app-bcv
     ```
 
