@@ -57,7 +57,7 @@ jobs:
       - name: Build Windows
         env:
           PYTHONIOENCODING: utf-8
-        run: flet build windows --product "ScrapBCV"
+        run: flet build windows --product "ScrapBCV" --yes
       - name: Package Windows
         shell: pwsh
         run: |
@@ -173,6 +173,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           flet build apk --product "ScrapBCV" \
+            --yes \
             --build-version "$APP_BUILD_NAME" \
             --build-number "$APP_BUILD_NUMBER" \
             --android-signing-key-store "$(pwd)/upload-keystore.jks" \
@@ -214,7 +215,7 @@ jobs:
       - name: Build MacOS
         env:
           PYTHONIOENCODING: utf-8
-        run: flet build macos --product "ScrapBCV"
+        run: flet build macos --product "ScrapBCV" --yes
       - name: Package MacOS
         run: |
           # Crear un DMG o ZIP. Flet build macos crea un .app en build/macos
